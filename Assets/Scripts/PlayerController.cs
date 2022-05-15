@@ -7,26 +7,37 @@ public class PlayerController : MonoBehaviour {
 	private Rigidbody2D rb;
 	private Transform	groundCheck;
 	private LayerMask groundLayer;
-
-	public float moveSpeed = 1f;
-	private float horizontalInput;
+	private Material playerMaterial;
 
 	private bool isFacingRight;
 
-	void Awake() {
+	private float horizontalInput;
+	public float moveSpeed = 5f;
+	public float jumpPower = 5f;
+	public float fallMultiplier = 2.5f;
+	
+	private void Awake() {
 		rb = GetComponent<Rigidbody2D>();
 		groundCheck = this.gameObject.transform.Find("GroundCheck").gameObject.transform;
-		// groundLayer = LayerMask.GetMask("Ground");
+		groundLayer = LayerMask.GetMask("Ground");
+		playerMaterial = GetComponent<Renderer>().material;
 	}
 
-	void Update() {
+	private void FixedUpdate() {
 		rb.velocity = new Vector2(horizontalInput * moveSpeed, rb.velocity.y);
 
+		// Increase gravity when falling
+		if (rb.velocity.y < 0) {
+			rb.velocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+		}
+
+		#region Flip Sprite
 		if (!isFacingRight && horizontalInput > 0f) {
 			FlipSprite();
 		} else if (isFacingRight && horizontalInput < 0f) {
 			FlipSprite();
 		}
+		#endregion
 	}
 
 	private void FlipSprite() {
@@ -47,8 +58,13 @@ public class PlayerController : MonoBehaviour {
 		horizontalInput = context.ReadValue<Vector2>().x;
 	}
 
-	public void Jump() {
-		Debug.Log(groundCheck.name);
-		rb.AddForce(Vector2.up * moveSpeed, ForceMode2D.Impulse);
+	public void Jump(InputAction.CallbackContext context) {
+		if (context.performed && IsGrounded()) {
+			rb.velocity = new Vector2(rb.velocity.x, jumpPower);
+		}
+
+		if (context.canceled && rb.velocity.y > 0f) {
+			rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
+		}
 	}
 }
